@@ -1,74 +1,80 @@
-def printBoard():
-    print(board[1], '|', board[2], '|', board[3])
-    print(board[4], '|', board[5], '|', board[6])
-    print(board[7], '|', board[8], '|', board[9])
-
-def spaceFree(pos): return board[pos] == ' '
-
-def insert(letter, pos):
-    if spaceFree(pos):
-        board[pos] = letter
-        printBoard()
-        print("--------")
-        if draw(): print("Draw!"); exit()
-        if win(): print("Bot wins!" if letter == 'X' else "Player wins!"); exit()
-    else:
-        insert(letter, int(input("Invalid! Enter new pos: ")))
-
-def win():
-    for x in combos:
-        if board[x[0]] == board[x[1]] == board[x[2]] != ' ': return True
+def print_board(board):
+    for row in board:
+        print("|".join(row))
+        print("-------")
+    
+def check_winner(board,player):
+    for i in range(3):
+        if all(board[i][j] == player for j in range(3)) or all(board[j][i] == player for j in range(3)):
+            return True
+    if all(board[i][i] == player for i in range(3)) or all(board[i][2-i] == player for i in range(3)):
+        return True
     return False
+    
+def is_board_full(board):
+    return all(board[i][j]!=' ' for i in range(3) for j in range(3))
 
-def whoWon(mark):
-    for x in combos:
-        if board[x[0]] == board[x[1]] == board[x[2]] == mark: return True
-    return False
-
-def draw(): return all(board[k] != ' ' for k in board)
-
-def playerMove(): insert(player, int(input("Enter pos for 'O': ")))
-
-def compMove():
-    best, move = -800, 0
-    for k in board:
-        if spaceFree(k):
-            board[k] = bot
-            s = minimax(False)
-            board[k] = ' '
-            if s > best: best, move = s, k
-    insert(bot, move)
-
-def minimax(maximizing):
-    if whoWon(bot): return 1
-    if whoWon(player): return -1
-    if draw(): return 0
-    if maximizing:
-        best = -800
-        for k in board:
-            if spaceFree(k):
-                board[k] = bot
-                best = max(best, minimax(False))
-                board[k] = ' '
-        return best
+def dfs(board,player):
+    if check_winner(board,'X'):
+        return 1
+    elif check_winner(board,'O'):
+        return -1
+    elif is_board_full(board):
+        return 0
+    scores = []
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == ' ':
+                board[i][j] = player
+                if player == 'X':
+                    scores.append(dfs(board,'O'))
+                else:
+                    scores.append(dfs(board,'X'))
+                board[i][j] = ' '
+    if player == 'X':
+        return max(scores)
     else:
-        best = 800
-        for k in board:
-            if spaceFree(k):
-                board[k] = player
-                best = min(best, minimax(True))
-                board[k] = ' '
-        return best
+        return min(scores)
+    
+def find_best_move(board):
+    best_score = float('-inf')
+    best_move = (-1,-1)
+    for i in range(3):
+        for j in range(3):
+            if board[i][j] == ' ':
+                board[i][j] = 'X'
+                score = dfs(board,'O')
+                board[i][j] = ' '
+                if score > best_score:
+                    best_score = score
+                    best_move = (i,j)
+    return best_move
 
-board = {i: ' ' for i in range(1, 10)}
-combos = [[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[1,5,9],[3,5,7]]
-player, bot = 'O', 'X'
+def play_game():
+    board = [[' ' for _ in range(3)] for _ in range(3)]
+    current_player = 'X'
+    while True:
+        print_board(board)
+        if current_player == 'X':
+            row,col = find_best_move(board)
+            board[row][col] = 'X'
+        else:
+            while True:
+                row = int(input("enter row (0-2):"))
+                col = int(input("enter col (0-2):"))
+                if 0 <= row <= 2 and 0 <= col <= 2 and board[row][col] == ' ':
+                    break
+                else:
+                    print("invalid move... try again")
+            board[row][col] = 'O'
+        if check_winner(board,current_player):
+            print_board(board)
+            print(f"player {current_player} wins!")
+            break
+        elif is_board_full(board):
+            print_board(board)
+            print("its a tie")
+            break
+        current_player = 'X' if current_player == 'O' else 'O'
 
-printBoard()
-print("--------")
-print("Player goes first!\nPositions:\n1 2 3\n4 5 6\n7 8 9\n")
-
-while not win():
-    playerMove()
-    if win(): break
-    compMove()
+play_game()
