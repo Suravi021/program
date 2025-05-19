@@ -1,113 +1,119 @@
-import heapq
 
-goal_state = (1, 2, 3,
-              4, 5, 6,
-              7, 8, 0)
-
-# Directions: (row_offset, col_offset)
-moves = {
-    'up': -3,
-    'down': 3,
-    'left': -1,
-    'right': 1
-}
-
-def manhattan_distance(state):
-    distance = 0
-    for i, value in enumerate(state):
-        if value == 0:
-            continue
-        goal_pos = goal_state.index(value)
-        x1, y1 = divmod(i, 3)
-        x2, y2 = divmod(goal_pos, 3)
-        distance += abs(x1 - x2) + abs(y1 - y2)
-    return distance
-
-def get_neighbors(state):
-    neighbors = []
-    zero_index = state.index(0)
-    row, col = divmod(zero_index, 3)
-
-    for move, offset in moves.items():
-        new_index = zero_index + offset
-        if move == 'up' and row == 0: continue
-        if move == 'down' and row == 2: continue
-        if move == 'left' and col == 0: continue
-        if move == 'right' and col == 2: continue
-
-        new_state = list(state)
-        new_state[zero_index], new_state[new_index] = new_state[new_index], new_state[zero_index]
-        neighbors.append(tuple(new_state))
-
-    return neighbors
-
-def reconstruct_path(came_from, current):
-    path = [current]
-    while current in came_from:
-        current = came_from[current]
-        path.append(current)
-    return path[::-1]
-
-def a_star(start):
-    open_set = []
-    heapq.heappush(open_set, (manhattan_distance(start), 0, start))
-    came_from = {}
-    g_score = {start: 0}
-
-    while open_set:
-        _, cost, current = heapq.heappop(open_set)
-
-        if current == goal_state:
-            return reconstruct_path(came_from, current)
-
-        for neighbor in get_neighbors(current):
-            tentative_g = g_score[current] + 1
-            if neighbor not in g_score or tentative_g < g_score[neighbor]:
-                came_from[neighbor] = current
-                g_score[neighbor] = tentative_g
-                f_score = tentative_g + manhattan_distance(neighbor)
-                heapq.heappush(open_set, (f_score, tentative_g, neighbor))
-
-    return None
-
-def print_puzzle(state):
-    for i in range(0, 9, 3):
-        print(state[i:i+3])
+def print_state(state):
+    for row in state:
+        row_str = ""
+        for num in row:
+            row_str += str(num) + " "
+        print(row_str)
     print()
 
-def main():
-    print("Enter the 8-puzzle start state (use 0 for the blank):")
-    try:
-        tiles = list(map(int, input("Enter 9 space-separated numbers: ").strip().split()))
-        if len(tiles) != 9 or set(tiles) != set(range(9)):
-            print("Error: Please enter numbers from 0 to 8 exactly once.")
-            return
-    except:
-        print("Invalid input.")
-        return
+# Function to find the blank tile in the puzzle
 
-    start_state = tuple(tiles)
-    solution = a_star(start_state)
+def find_blank(state):
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] == 0:
+                return i, j
 
-    if solution:
-        print("\nSolved in", len(solution) - 1, "moves.")
-        for step in solution:
-            print_puzzle(step)
+def move(state,direction):
+  i,j=find_blank(state)
+  new_state = []
+  for row in state:
+    new_row = row[:]
+    new_state.append(new_row)
+
+  if direction=="up":
+    if i > 0:
+      new_state[i][j], new_state[i-1][j] = new_state[i-1][j], new_state[i][j]
+      return new_state
     else:
-        print("No solution found.")
+      return None
 
-if __name__ == "__main__":
-    main()
+  if direction=="down":
+    if i < 2:
+      new_state[i][j], new_state[i+1][j] = new_state[i+1][j], new_state[i][j]
+      return new_state
+    else:
+      return None
 
-"""
+  if direction=="left":
+    if j > 0:
+      new_state[i][j], new_state[i][j-1] = new_state[i][j-1], new_state[i][j]
+      return new_state
+    else:
+      return None
 
-1 2 3 4 5 6 0 7 8 → 2 moves
+  if direction=="right":
+    if j < 2:
+      new_state[i][j], new_state[i][j+1] = new_state[i][j+1], new_state[i][j]
+      return new_state
+    else:
+      return None
 
-1 2 3 4 0 6 7 5 8 → 4 moves
+   
+def calculate_heuristic(state, goal_state):
+    # Simple heuristic: count the number of misplaced tiles
+    h = 0
+    for i in range(3):
+        for j in range(3):
+            if state[i][j] != goal_state[i][j]:
+                h += 1
+    return h
 
-1 2 3 0 5 6 4 7 8 → 4 moves
 
-1 2 3 5 0 6 4 7 8 → 6 moves
 
-1 3 6 5 0 2 4 7 8 → 8 moves
-"""
+
+def a_star(initial_state, goal_state):
+    OPEN = [(calculate_heuristic(initial_state, goal_state), 0, initial_state)]
+    CLOSED = set()
+    found=False
+    while OPEN:
+        f, g, current_state = min(OPEN)
+        OPEN.remove((f, g, current_state))
+        CLOSED.add(tuple(map(tuple, current_state)))
+
+
+        print_state(current_state)
+
+
+        if current_state == goal_state:
+            print("Solution found!")
+            found=True
+            break
+
+        steps=["up","down","left","right"]
+        successors = [move(current_state,direction) for direction in steps]
+
+        suc = []
+        for s in successors:
+            if s:
+                if (tuple(map(tuple, s)) not in CLOSED):
+                    suc.append(s)
+
+
+        for successor in suc:
+            h = calculate_heuristic(successor, goal_state)
+            g_successor = g + 1
+            f_successor = g_successor + h
+
+
+            if (f_successor, g_successor, successor) not in OPEN:
+                OPEN.append((f_successor, g_successor, successor))
+    if found==False:
+        print("Solution not found")
+
+# Updated example usage with the provided input
+initial_state = [
+    [1, 2, 3],
+    [8, 0, 4],
+    [7, 6, 5]
+]
+
+goal_state = [
+    [1, 2, 0],
+    [8, 6, 3],
+    [7, 5, 4]
+]
+
+a_star(initial_state, goal_state)
+
