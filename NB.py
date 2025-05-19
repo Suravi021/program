@@ -42,18 +42,7 @@ class NaiveBayes():
                 for value in unique_values:
                     count = np.sum((x[feature] == value) & (Y == c))
                     self.features_prob[c][feature][value] = count / counts[c]
-            # for feature in x.columns:
-            #     self.features_prob[c][feature] = {}  # one more dict inside to store
-            #     unique_values = []  # to store unique values of that feature
-            #     for value in x[feature]:
-            #         if value not in unique_values:
-            #             unique_values.append(value)
-            #     for value in unique_values:
-            #         count = 0
-            #         for i in range(len(x[feature])):
-            #             if x[feature][i] == value and Y[i] == c:
-            #                 count += 1
-            #         self.features_prob[c][feature][value] = count / counts[c]
+            
    
 
 
